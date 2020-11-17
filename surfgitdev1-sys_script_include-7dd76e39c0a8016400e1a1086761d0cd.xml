@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2020-11-17 23:18:11"><sys_script_include><access>package_private</access><active>true</active><api_name>global.AbstractList</api_name><caller_access/><client_callable>false</client_callable><description/><name>AbstractList</name><script><![CDATA[gs.include("PrototypeServer");
+
+var AbstractList = Class.create();
+
+AbstractList.prototype = {
+    SYS_USER : 'sys_user',
+    NAME : 'name',
+    VIEW : 'view',
+    PARENT : 'parent',
+    SYS_UI_LIST : 'sys_ui_list',
+    RELATIONSHIP : 'relationship',
+    DOMAIN : 'sys_domain',
+    NOT_FOUND_ID: "-1",
+
+    initialize : function(table, view, viewName) {
+        this.tableName = table;
+        this.view = view;
+        this.parentName = '';
+        this.relationshipID = '';
+        this.user = gs.getUserID();
+        this.defaultViewID = new GlideScriptViewManager("").getID();
+        this.domainID = GlideDomainSupport.getCurrentDomainValueOrGlobal();
+
+        // mobile always gets the mobile view, regardless of what we asked for
+        if (GlideMobileExtensions.getDeviceType() == 'mobile')
+            this.viewName = 'Mobile';
+
+        if (viewName)
+            this.viewName = viewName.toLowerCase();
+    },
+
+    setParent : function(parent) {
+        this.parentName = parent;
+    },
+
+    setRelationshipID : function(relID) {
+        this.relationshipID = relID;
+    },
+
+    addParentQuery : function(gr) {
+        if (this.parentName != '')
+            gr.addQuery(this.PARENT, this.parentName);
+        else
+            gr.addNullQuery(this.PARENT);
+    },
+
+    addRelationshipQuery : function(gr) {
+        if (this.relationshipID != '')
+            gr.addQuery(this.RELATIONSHIP, this.relationshipID);
+        else
+            gr.addNullQuery(this.RELATIONSHIP);
+    },
+
+    domainQuery : function(gr, domainID) {
+        GlideDomainSupport.queryLowestLevelDomain(gr,domainID);
+    },
+
+    getParents : function() {
+        var answer = this._getParentArray(this.tableName);
+
+        if (!GlidePluginManager.isRegistered('com.glideapp.staged_tables'))
+            return answer;
+
+        var s = new StagingEngine();
+        var staged = s.getStagedTable(this.tableName);
+        if (staged == null)
+            return answer;
+
+        var merged = new Array();
+        merged.push(staged);
+        var list = this._getParentArray(staged);
+        if (list == null || answer == null)
+            return merged;
+
+        var maxlength = list.length;
+        if (maxlength < answer.length)
+            maxlength = answer.length;
+
+        for (var i = 0; i < maxlength; i++) {
+            if (i < answer.length)
+                merged.push(answer[i]);
+
+            if (i < list.length)
+                merged.push(list[i]);
+        }
+
+        return merged;
+    },
+
+    _getParentArray : function(tableName) {
+        var list = GlideDBObjectManager.getActionTables(tableName);
+        if (list == null || list.size() < 2)
+            return null;
+
+        var answer = new Array();
+        for (var i = 1; i < list.size(); i++)
+            answer[i-1] = list.get(i);
+
+        return answer;
+    }
+}        ]]></script><sys_class_name>sys_script_include</sys_class_name><sys_created_by>glide.maint</sys_created_by><sys_created_on>2008-12-28 13:45:17</sys_created_on><sys_id>7dd76e39c0a8016400e1a1086761d0cd</sys_id><sys_mod_count>44</sys_mod_count><sys_name>AbstractList</sys_name><sys_package display_value="System (glidesoft)" source="glidesoft">cd3f0d12db1100103dca9a17db9619ec</sys_package><sys_policy/><sys_scope display_value="Global">global</sys_scope><sys_update_name>sys_script_include_7dd76e39c0a8016400e1a1086761d0cd</sys_update_name><sys_updated_by>don goodliffe</sys_updated_by><sys_updated_on>2012-02-08 00:35:39</sys_updated_on></sys_script_include></unload>
