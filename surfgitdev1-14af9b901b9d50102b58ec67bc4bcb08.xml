@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2020-11-17 23:04:05"><sys_remote_update_set action="INSERT_OR_UPDATE"><application display_value="Feature Rollout">00c5b18edbe0b300ae4cdda5ca96192b</application><application_name>Feature Rollout</application_name><application_scope>x_snc_feature_roll</application_scope><application_version>1.0.14</application_version><collisions/><commit_date/><deleted/><description>Automatically created by the system</description><inserted/><name>System Administrator</name><origin_sys_id/><parent/><release_date/><remote_base_update_set/><remote_parent_id/><remote_sys_id>14af9b901b9d50102b58ec67bc4bcb08</remote_sys_id><state>loaded</state><summary/><sys_class_name>sys_remote_update_set</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2020-11-17 23:04:05</sys_created_on><sys_id>20f465a91b20e4d42b58ec67bc4bcbcb</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>admin</sys_updated_by><sys_updated_on>2020-11-17 23:04:05</sys_updated_on><update_set/><update_source/><updated/></sys_remote_update_set><sys_update_xml action="INSERT_OR_UPDATE"><action>INSERT_OR_UPDATE</action><application display_value="Feature Rollout">00c5b18edbe0b300ae4cdda5ca96192b</application><category>customer</category><comments/><name>sys_script_fix_3944c4601b9190102b58ec67bc4bcb1f</name><payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_fix"&gt;&lt;sys_script_fix action="INSERT_OR_UPDATE"&gt;&lt;active&gt;false&lt;/active&gt;&lt;before&gt;false&lt;/before&gt;&lt;description&gt;fix form layout issue on x_snc_feature_roll_feature_rollout&lt;/description&gt;&lt;flush_cache&gt;false&lt;/flush_cache&gt;&lt;name&gt;feature rollout fix form layout&lt;/name&gt;&lt;record_for_rollback&gt;false&lt;/record_for_rollback&gt;&lt;run_once&gt;true&lt;/run_once&gt;&lt;script&gt;&lt;![CDATA[//delete UI form section
+
+var uiForm = new GlideRecord('sys_ui_form');
+uiForm.addEncodedQuery('name=x_snc_feature_roll_feature_rollout');
+uiForm.query();
+while (uiForm.next()) {
+    var uiFormSection = new GlideRecord('sys_ui_form_section');
+    uiFormSection.addQuery('sys_ui_form', uiForm.getUniqueValue());
+    uiFormSection.query();
+    uiFormSection.deleteMultiple();
+	uiForm.deleteRecord();
+}
+
+var formSection = new GlideRecord('sys_ui_section');
+formSection.addEncodedQuery('name=x_snc_feature_roll_feature_rollout');
+formSection.query();
+formSection.deleteMultiple();
+
+//delete customization
+var customization = new GlideRecord('sys_update_xml');
+customization.addEncodedQuery('name=sys_ui_section_6406bdcedbe0b300ae4cdda5ca9619c0^ORname=sys_ui_form_sections_90d7f30adb059810e76ddb85ca9619ec^ORname=sys_ui_section_1881980fdba4b300ae4cdda5ca96196f');
+customization.query();
+customization.deleteMultiple();]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_fix&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2020-06-06 00:40:00&lt;/sys_created_on&gt;&lt;sys_id&gt;3944c4601b9190102b58ec67bc4bcb1f&lt;/sys_id&gt;&lt;sys_mod_count&gt;5&lt;/sys_mod_count&gt;&lt;sys_name&gt;feature rollout fix form layout&lt;/sys_name&gt;&lt;sys_package display_value="Feature Rollout" source="x_snc_feature_roll"&gt;00c5b18edbe0b300ae4cdda5ca96192b&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Feature Rollout"&gt;00c5b18edbe0b300ae4cdda5ca96192b&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_fix_3944c4601b9190102b58ec67bc4bcb1f&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2020-06-08 23:39:49&lt;/sys_updated_on&gt;&lt;unloadable&gt;false&lt;/unloadable&gt;&lt;/sys_script_fix&gt;&lt;/record_update&gt;</payload><payload_hash>1274894178</payload_hash><remote_update_set display_value="System Administrator">20f465a91b20e4d42b58ec67bc4bcbcb</remote_update_set><replace_on_upgrade>false</replace_on_upgrade><sys_created_by>admin</sys_created_by><sys_created_on>2020-11-17 23:04:05</sys_created_on><sys_id>24f465a91b20e4d42b58ec67bc4bcbcb</sys_id><sys_mod_count>0</sys_mod_count><sys_recorded_at>172964def1e0000001</sys_recorded_at><sys_updated_by>admin</sys_updated_by><sys_updated_on>2020-11-17 23:04:05</sys_updated_on><table/><target_name>feature rollout fix form layout</target_name><type>Fix Script</type><update_domain>global</update_domain><update_guid>e09b17d50cd11810441d65580f329ae8</update_guid><update_guid_history>e09b17d50cd11810441d65580f329ae8:1274894178,cd49471d6c51181024264f6ab4048566:1957746843,608383d1bc511810ff6066c1fef90ae0:-2035070632,b7a97e916411181051d7daaf1b99a703:-1912425851,4a083eddd5ddd4100b732ee868a02db2:-941205411,899c802c9d919010d81dc85ac6a237ae:245974917</update_guid_history><update_set/><view/></sys_update_xml></unload>
