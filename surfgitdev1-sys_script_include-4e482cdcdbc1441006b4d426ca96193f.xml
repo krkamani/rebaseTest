@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2020-11-17 23:20:37"><sys_script_include><access>public</access><active>true</active><api_name>global.GitKeepUtil</api_name><caller_access/><client_callable>false</client_callable><description/><name>GitKeepUtil</name><script><![CDATA[var GitKeepUtil = Class.create();
+GitKeepUtil.prototype = {
+	initialize: function(sys_id,table) {
+		if(sys_id && table){
+			var recordGR = new GlideRecord(table);
+			if(recordGR.get(sys_id)) this.recordGR = recordGR;
+			this.filename = gs.getProperty("instance_name") + "-" + table + "-" + sys_id + ".xml";
+		}
+		this.UPDSETFILTER = gs.getProperty("git_keep.updatesetfilter");
+		this.GE = new GlideEncrypter(); 
+	},
+	
+	// Build the XML payload of the record
+	getXMLfromRecord: function(recordGR){
+		// Start building the XML output
+		var outputStart = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+		var unloadTag = "<unload unload_date=\"" + GlideDateTime().toString() + "\">";
+		var unloadClose = "</unload>";
+		// Add a cleaned up payload of the update set record itself
+		var xml = new GlideRecordXMLSerializer();
+		var recordXML = new global.String(xml.serialize(recordGR));
+		recordXML = recordXML.replace(/<\?xml version="1\.0" encoding="UTF-8"\?>/,"");
+		var output = outputStart + unloadTag + recordXML +unloadClose;
+		return output;
+	},
+	
+	// Get timestamp of latest customer update under a specific update set
+	getLastUpdateDate: function(sysid){
+		var custUpdate = new GlideRecord("sys_update_xml");
+		custUpdate.addQuery("update_set", sysid);
+		custUpdate.orderByDesc("sys_updated_on");
+		custUpdate.setLimit(1);
+		custUpdate.query();
+		if (custUpdate.next()){
+			return custUpdate.sys_updated_on;
+		}else{
+			return false;
+		}
+	},
+	
+	// Set Git Update fields
+	setFields: function(gitGR, filename, sha){
+		gitGR.u_sha = sha;
+		gitGR.u_last_upload = new GlideDateTime();
+		gitGR.u_file_name = filename;
+	},
+	
+	// Extract and back up to GitHub a specific update set return sha
+	uploadRecord: function(filename, recordGR){
+		var recordContents = this.getXMLfromRecord(recordGR);
+		var userObj = {};
+		var grUUC = new GlideRecord('u_user_configuration');
+		if (grUUC.get('u_user',gs.getUserID())) {
+			userObj.pswd = this.GE.decrypt(grUUC.u_password);
+			userObj.repo = grUUC.u_repo;
+			userObj.user = grUUC.u_username;
+		}
+		var ws = new GitWSHelper(userObj);
+		return ws.uploadFile(filename, recordContents, recordGR.name);
+	},
+	
+	// Extract and back up to GitHub a specific update set
+	uploadUpdateSet: function(filename, sysid, name){
+		var usetHelper = new UpdateSetUtil();
+		var userObj = {};
+		userObj.pswd = this.GE.decrypt(gs.getProperty("git_keep.ghpassword")); 
+		userObj.user = gs.getProperty("git_keep.ghuser");
+		userObj.repo = gs.getProperty("git_keep.ghrepo");
+		var ws = new GitWSHelper(userObj);
+		var updateSetContents = usetHelper.copyAndExtract(sysid);
+		// copyAndExtract will return false if we've excceded the string character limit
+		if(updateSetContents){
+			var sha = ws.uploadFile(filename, updateSetContents, name);
+			this.updateGitUpload(sysid, filename, sha);
+		}
+	},
+	
+	// Called by scheduled job and ui action
+	processRecord: function(){
+		try{
+		if(this.recordGR){
+			// See if the record was ever uploaded to Git
+			var gitGR = new GlideRecord("u_git_keep_git_update_set_upload");
+			if (gitGR.get("u_file_name", this.filename)){
+				var lastUpload = gitGR.u_last_upload;
+				var updatedOn = this.recordGR.sys_updated_on;
+				// Has the record been updated since last upload?
+				if (updatedOn > lastUpload){
+					this.setFields(gitGR,this.filename,this.uploadRecord(this.filename,this.recordGR));
+					gitGR.update();
+				}
+			}else{
+				// record was never uploaded to Git, back it up
+				gitGR.initialize();
+				this.setFields(gitGR,this.filename,this.uploadRecord(this.filename,this.recordGR));
+				gitGR.insert();
+			}
+		}
+		} catch(errr){
+			gs.error("Error GitKeepUtil.processRecord  errr"  + errr);
+		}
+	},
+	processUpdateSets: function(){
+		// Iterate through filtered list of update sets
+		var updateSet = new GlideRecord("sys_update_set");
+		updateSet.addEncodedQuery(this.UPDSETFILTER);
+		updateSet.orderByDesc('completed_on');
+		updateSet.query();
+		while (updateSet.next()){
+			var filename = gs.getProperty("instance_name") + "-" + updateSet.getUniqueValue() + ".xml";
+			// See if the update set was ever uploaded to Git
+			var gitUploads = new GlideRecord("u_git_keep_git_update_set_upload");
+			if (gitUploads.get("u_local_update_set", updateSet.sys_id)){
+				var lastUpdate = this.getLastUpdateDate(updateSet.sys_id);
+				var lastUpload = gitUploads.u_last_upload;
+				var updatedOn = updateSet.sys_updated_on;
+				var completedOn = new GlideDateTime(updateSet.completed_on).getDate();
+				// Has anything changed?
+				if ((!lastUpdate && updatedOn > lastUpload) || lastUpdate > lastUpload || updatedOn > lastUpload){
+					this.setFields(gitUploads,this.filename,this.uploadUpdateSet(filename, updateSet.sys_id, completedOn+'-'+updateSet.name));
+					gitUploads.update();
+				}
+			}else{
+				// Update set was never uploaded to Git, back it up
+				gitUploads.initialize();
+				gitUploads.u_local_update_set = updateSet.getUniqueValue();
+				this.setFields(gitUploads,this.filename,this.uploadUpdateSet(filename, updateSet.sys_id, completedOn+'-'+updateSet.name));
+				gitUploads.insert();
+			}
+		}
+	},
+	type: 'GitKeepUtil'
+};]]></script><sys_class_name>sys_script_include</sys_class_name><sys_created_by>ryan.litwiller</sys_created_by><sys_created_on>2019-11-07 01:35:43</sys_created_on><sys_id>4e482cdcdbc1441006b4d426ca96193f</sys_id><sys_mod_count>34</sys_mod_count><sys_name>GitKeepUtil</sys_name><sys_package display_value="Git Keep" source="3b8b6b77db70041006b4d426ca961906">3b8b6b77db70041006b4d426ca961906</sys_package><sys_policy/><sys_scope display_value="Git Keep">3b8b6b77db70041006b4d426ca961906</sys_scope><sys_update_name>sys_script_include_4e482cdcdbc1441006b4d426ca96193f</sys_update_name><sys_updated_by>krishna.kamani@snc</sys_updated_by><sys_updated_on>2020-11-17 23:20:29</sys_updated_on></sys_script_include></unload>
